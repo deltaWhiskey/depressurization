@@ -78,7 +78,7 @@
 
 				// pressure warnings
 				['pressure', 32, 'Twentieth century space suits kept internal pressure between 21 and 32 kPa', false],
-				['pressure', 6.3, 'Armstrong limit: below 6.3 kPa, exposed body fluids (saliva, tears, the liquid in lungs) boils away, but not fluids contained in the body like blood', false]
+				['pressure', 6.3, 'Armstrong limit: below 6.3 kPa, exposed fluids at body temperature (saliva, tears, the liquid in lungs) boils away, but not fluids contained in the body like blood', false]
 			];
 
 			// class constants representing positions in triggers members
@@ -87,6 +87,8 @@
 			MESSAGE = 2;
 			USED = 3;
 
+			// Returns string of notes that apply when pressures drop below certain point.
+			// Will never output the same message twice per instance.
 			getNotes(pressure_kpa, pressure_oxygen_kpa) {
 				let output = '';
 				for (let i = 0; i < this.triggers.length; i++) {
@@ -106,6 +108,16 @@
 					}
 				}
 				return output;
+			}
+
+			// Returns true if all notes have been shown
+			allNotesShown() {
+				for (let i = 0; i < this.triggers.length; i++) {
+					if (! this.triggers[i][this.USED]) {
+						return false;
+					}
+				}
+				return true;
 			}
 		}
 
@@ -185,6 +197,16 @@
 			// run simulation
 			mass = pressure * volume * molecular_weight / Rg / temperature;
 			density = mass / volume;
+
+			// Normally, this outputs one line per 100 seconds.
+			// If decompression is especially fast, output more frequently.
+			mass_loss = area * Math.sqrt( 2 * pressure * density );
+			if (mass / mass_loss < 10) {
+				interval = 1;
+			} else if (mass / mass_loss < 100) {
+				interval = 10;
+			}
+
 			do {
 				// output current situation
 				if ( 0 == seconds % interval ) {
@@ -209,15 +231,13 @@
 				mass = mass - mass_loss;
 				density = mass / volume;
 				pressure = density * Rg * temperature / molecular_weight;
-			} while ( pressure > starting_pressure / 10 ) 
+			} while ( ! notes.allNotesShown()) 
 
 			out.innerHTML += buffer + '</table>';
 		}
 		document.getElementById('simulate').addEventListener('click', simulate);
 
 		// TODO more options for atmosphere types: air, pure oxy, oxy-helium, neox
-
-		// TODO allow input of area of hole in either square metes or square centimeters
 		</script>
 	</body>
 </html>
