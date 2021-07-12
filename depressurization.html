@@ -18,7 +18,7 @@
 	</head>
 	<body>
 		<h1>Depressurization Calculator</h1>
-		<p>If there was a hole in a space ship, how fast would atmosphere escape? This calculator gives a general idea.</p>
+		<p>If there was a hole in a space ship, how fast would atmosphere escape? This calculator gives a general idea. This is just based on things I found on the internet. Do not take anything here as medical advice.</p>
 
 		<p>Enter the variables below, then tap the "run simulation" button.</p>
 
@@ -39,7 +39,13 @@
 				<tr>
 					<td>starting pressue
 					<td>
-						<input id="pressure" value="1"/> earth atmospheres
+						<input id="pressure" value="1"/> Earth atmospheres
+					</td>
+				</tr>
+				<tr>
+					<td>oxygen content of atmosphere
+					<td>
+						<input id="oxygen" value=".21"/> for an Earth-like atmosphere of 21% oxygen, enter .21
 					</td>
 				</tr>
 			</table>
@@ -53,7 +59,7 @@
 
 		<p>There are all sorts of factors this calculator does not deal with. Some of them are:</p>
 		<ul>
-			<li>This calculator focuses on how long atmosphere stays breathable, but that is not the only danger of depressurization. People who experience a too-rapid drop in pressure can get "the bends"; nitrogen bubbles forming in the blood, particularly at joints. This can be life threatening.</li>
+			<li>This calculator focuses on how long atmosphere stays breathable, but there are other dangers. People who experience a too-rapid drop in pressure can get "the bends"; nitrogen bubbles forming in the blood, particularly at joints. This can be life threatening.</li>
 			<li>Rate of depressurization would be affected by temperature. This calculator assumes the temperature remains around a human-comfortable 20 degrees celsius (just under 70 degrees farenheit.)</li>
 			<li>This assumes the breach in the pressurized compartment appears without side effect. In a real accident, there may be other hazards like debris, a shock wave in the compartment's atmosphere, etc.</li>
 			<li>The force exerted at hole by wind is only true if the object perfectly fitted the hole, and was exactly plugging the hole.</li>
@@ -62,17 +68,59 @@
 
 
 		<script type="text/javascript">
+
+		class noteClass {
+			triggers = [
+				// oxygen warnings
+				['oxygen', 16, 'Below oxygen partial pressure around 16 kPa, sustaining vigorous activity becomes difficult unless acclimated', false],
+				['oxygen', 7.6, 'Mountain climber death zone: if humans remain for minutes or hours at oxygen partial pressure below 7.6 kPa, humans become disoriented, lose consciousness, and eventually die', false],
+				['oxygen', 6.3, 'Below oxygen partial pressure 6.3 kPa, humans lose consciousness', false],
+
+				// pressure warnings
+				['pressure', 32, 'Twentieth century space suits kept internal pressure between 21 and 32 kPa', false],
+				['pressure', 6.3, 'Armstrong limit: below 6.3 kPa, exposed body fluids (saliva, tears, the liquid in lungs) boils away, but not fluids contained in the body like blood', false]
+			];
+
+			// class constants representing positions in triggers members
+			TYPE = 0;
+			MAX = 1;
+			MESSAGE = 2;
+			USED = 3;
+
+			getNotes(pressure_kpa, pressure_oxygen_kpa) {
+				let output = '';
+				for (let i = 0; i < this.triggers.length; i++) {
+					if (this.triggers[i][this.USED]) {
+						// this message has already displayed
+						continue;
+					}
+
+					let value = pressure_kpa;
+					if (this.triggers[i][this.TYPE] == 'oxygen') {
+						value = pressure_oxygen_kpa;
+					}
+
+					if (this.triggers[i][this.MAX] >= value) {
+						this.triggers[i][this.USED] = true;
+						output += '<p>' + this.triggers[i][this.MESSAGE] + '</p>';
+					}
+				}
+				return output;
+			}
+		}
+
 		function simulate() {
 			// function variables
 			let out = document.getElementById('output');
 			let error = document.getElementById('error');
 			let interval = 100; // output variables every this many seconds
 			let buffer = ''; // buffer of HTML that has not yet been sent to div
+			let notes = new noteClass();
 
 			// physics variables
 			let volume;                  // volume of pressurized compartment, in meters
 			let area_centimeters;        // area of pressurized compartment, in meters
-			let atmospheres;             // starting pressure in compartment, in earth sea level atmospheres
+			let atmospheres;             // starting pressure in compartment, in Earth sea level atmospheres
 			let molecular_weight = .029; // molecular weight of gas (kg/mole)  - air=0.029
 			let temperature = 293;       // temp in kelvin (=20 Celcius)
 			let Rg = 8.314;              // Universal Gas Constant (J / mole-K)
@@ -83,11 +131,13 @@
 			let mass;                    // mass of remaining atmosphere (Kg)
 			let density;                 // density of remaining atmosphere (Kg / M^3)
 			let mass_loss;               // amount of atmosphere forced out of hole in a second
+			let oxygen;                  // percent of atmosphere that is oxygen
 
 			// read user input
-			volume = parseInt(document.getElementById('volume').value);
-			area_centimeters = parseInt(document.getElementById('area_centimeters').value);
-			atmospheres = parseInt(document.getElementById('pressure').value);
+			volume = parseFloat(document.getElementById('volume').value);
+			area_centimeters = parseFloat(document.getElementById('area_centimeters').value);
+			atmospheres = parseFloat(document.getElementById('pressure').value);
+			oxygen = parseFloat(document.getElementById('oxygen').value);
 
 			// prep user display
 			out.innerHTML = '';
@@ -103,6 +153,9 @@
 			if (isNaN(atmospheres)) {
 				error.innerHTML += "<p>Please enter a numeric starting pressure</p>";
 			}
+			if (isNaN(oxygen)) {
+				error.innerHTML += "<p>Please enter a numeric oxygen content</p>";
+			}
 			if (error.innerHTML != "") {
 				return;
 			}
@@ -116,14 +169,17 @@
 			buffer = "<h1>Depressurization Time</h1>"
 				+ "<ul><li>compartment volume: " + volume + " cubic meters</li>"
 				+ "<li>area: " + area_centimeters + " square centimeters</li>"
-				+ "<li>pressure: " + atmospheres + " earth atmospheres</li>"
+				+ "<li>pressure: " + atmospheres + " Earth atmospheres</li>"
+				+ "<li>oxygen content: " + (oxygen * 100) + "%</li>"
 				+ "</ul>";
 
 			buffer += "<table border=1 cellpadding=10><tr>"
 				+ "<th>Time (seconds / minute)</th>"
 				+ "<th>Mass remaining (kg)</th>"
 				+ "<th>Atmosphere density (kg/m^3)</th>"
-				+ "<th>Pressure (kPA / % of original)</th>"
+				+ "<th>Atmosphere pressure (kPA / % of original)</th>"
+				+ "<th>Oxygen pressure (kPA)</th>"
+				+ "<th>Note</th>"
 				+ "</tr>";
 
 			// run simulation
@@ -131,13 +187,21 @@
 			density = mass / volume;
 			do {
 				// output current situation
-				if ( 0 == seconds % interval )
-				buffer += "<tr>"
-					+ "<td>" + seconds.toFixed(0) + " / " + (seconds / 60).toFixed(1) + "</td>"
-					+ "<td>" + mass.toFixed(0) + "</td>"
-					+ "<td>" + density.toFixed(2) + "</td>"
-					+ "<td>" + (pressure.toFixed(2) / 1000).toFixed(0) + " / " + (pressure / starting_pressure * 100).toFixed(0) + "%</td>"
-					+ "</tr>";
+				if ( 0 == seconds % interval ) {
+					// maybe add a note
+					let pressure_kpa = (pressure.toFixed(2) / 1000);
+					let pressure_oxygen_kpa = pressure_kpa * oxygen;
+					let note = notes.getNotes(pressure_kpa, pressure_oxygen_kpa);
+
+					buffer += "<tr>"
+						+ "<td>" + seconds.toFixed(0) + " / " + (seconds / 60).toFixed(1) + "</td>"
+						+ "<td>" + mass.toFixed(0) + "</td>"
+						+ "<td>" + density.toFixed(2) + "</td>"
+						+ "<td>" + pressure_kpa.toFixed(1) + " / " + (pressure / starting_pressure * 100).toFixed(0) + "%</td>"
+						+ "<td>" + pressure_oxygen_kpa.toFixed(1) + "</td>"
+						+ "<td>" + note + "</td>"
+						+ "</tr>";
+				}
 
 				// calculate what changes in next second
 				seconds++; // advance time by 1 second
