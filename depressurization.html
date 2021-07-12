@@ -180,7 +180,7 @@
 			// generate boiler plate text at top of output
 			buffer = "<h1>Depressurization Time</h1>"
 				+ "<ul><li>compartment volume: " + volume + " cubic meters</li>"
-				+ "<li>area: " + area_centimeters + " square centimeters</li>"
+				+ "<li>hole area: " + area_centimeters + " square centimeters</li>"
 				+ "<li>pressure: " + atmospheres + " Earth atmospheres</li>"
 				+ "<li>oxygen content: " + (oxygen * 100) + "%</li>"
 				+ "</ul>";
@@ -191,6 +191,7 @@
 				+ "<th>Atmosphere density (kg/m^3)</th>"
 				+ "<th>Atmosphere pressure (kPA / % of original)</th>"
 				+ "<th>Oxygen pressure (kPA)</th>"
+				+ "<th>Wind force at hole (kg)</th>"
 				+ "<th>Note</th>"
 				+ "</tr>";
 
@@ -214,6 +215,7 @@
 					let pressure_kpa = (pressure.toFixed(2) / 1000);
 					let pressure_oxygen_kpa = pressure_kpa * oxygen;
 					let note = notes.getNotes(pressure_kpa, pressure_oxygen_kpa);
+					let wind_force_at_hole = pressure_kpa * 0.0101971805689;
 
 					buffer += "<tr>"
 						+ "<td>" + seconds.toFixed(0) + " / " + (seconds / 60).toFixed(1) + "</td>"
@@ -221,6 +223,7 @@
 						+ "<td>" + density.toFixed(2) + "</td>"
 						+ "<td>" + pressure_kpa.toFixed(1) + " / " + (pressure / starting_pressure * 100).toFixed(0) + "%</td>"
 						+ "<td>" + pressure_oxygen_kpa.toFixed(1) + "</td>"
+						+ "<td>" + wind_force_at_hole.toFixed(2) + " kg/cm<br/>" + (wind_force_at_hole * area_centimeters).toFixed(2) + " kg total</td>"
 						+ "<td>" + note + "</td>"
 						+ "</tr>";
 				}
@@ -237,7 +240,6 @@
 		}
 		document.getElementById('simulate').addEventListener('click', simulate);
 
-		// TODO more options for atmosphere types: air, pure oxy, oxy-helium, neox
 		</script>
 	</body>
 </html>
