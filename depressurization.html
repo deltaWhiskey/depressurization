@@ -1,0 +1,159 @@
+<html>
+	<head>
+		<title>Depressurization calculator</title>
+		<style>
+		body {
+			font-family: sans-serif;
+		}
+		button {
+			font-weight: bold;
+			font-size: 1.2em;
+			padding: 1em;
+		}
+		.error {
+			color: maroon;
+			font-weight: bold;
+		}
+		</style>
+	</head>
+	<body>
+		<h1>Depressurization Calculator</h1>
+		<p>If there was a hole in a space ship, how fast would atmosphere escape? This calculator gives a general idea.</p>
+
+		<p>Enter the variables below, then tap the "run simulation" button.</p>
+
+		<form>
+			<table border="1" cellpadding="10">
+				<tr>
+					<td>volume of pressurized compartment
+					<td>
+						<input id="volume" value="30"/> cubic meters
+					</td>
+				</tr>
+				<tr>
+					<td>area of hole
+					<td>
+						<input id="area_centimeters" value="1"/> square centimeters
+					</td>
+				</tr>
+				<tr>
+					<td>starting pressue
+					<td>
+						<input id="pressure" value="1"/> earth atmospheres
+					</td>
+				</tr>
+			</table>
+		</form>
+
+		<button id="simulate">run simulation</button>
+		<div id="error" class="error"></div>
+		<div id="output"></div>
+
+		<p>This calculator is based on information available at <a href="https://www.spaceacademy.net.au/flight/emg/spcdp.htm">SpaceAcademy.net.au</a>.</p>
+
+		<p>There are all sorts of factors this calculator does not deal with. Some of them are:</p>
+		<ul>
+			<li>This calculator focuses on how long atmosphere stays breathable, but that is not the only danger of depressurization. People who experience a too-rapid drop in pressure can get "the bends"; nitrogen bubbles forming in the blood, particularly at joints. This can be life threatening.</li>
+			<li>Rate of depressurization would be affected by temperature. This calculator assumes the temperature remains around a human-comfortable 20 degrees celsius (just under 70 degrees farenheit.)</li>
+			<li>This assumes the breach in the pressurized compartment appears without side effect. In a real accident, there may be other hazards like debris, a shock wave in the compartment's atmosphere, etc.</li>
+			<li>The force exerted at hole by wind is only true if the object perfectly fitted the hole, and was exactly plugging the hole.</li>
+			<li>This assumes the hole is in a very thin surface. If the hole was actually a long tube then friction would slow depressurization. It would slow even more if the hole isn't straight, such ias if the leak was along the threads of a loose screw.</li>
+		<ul>
+
+
+		<script type="text/javascript">
+		function simulate() {
+			// function variables
+			let out = document.getElementById('output');
+			let error = document.getElementById('error');
+			let interval = 100; // output variables every this many seconds
+			let buffer = ''; // buffer of HTML that has not yet been sent to div
+
+			// physics variables
+			let volume;                  // volume of pressurized compartment, in meters
+			let area_centimeters;        // area of pressurized compartment, in meters
+			let atmospheres;             // starting pressure in compartment, in earth sea level atmospheres
+			let molecular_weight = .029; // molecular weight of gas (kg/mole)  - air=0.029
+			let temperature = 293;       // temp in kelvin (=20 Celcius)
+			let Rg = 8.314;              // Universal Gas Constant (J / mole-K)
+			let pressure;                // pressure in Pascal (Earth atmospheric = 101,300 Pa)
+			let starting_pressure;       // keep record of initial pressure
+			let area = .0001;            // impact hole in square meters
+			let seconds = 0;             // seconds elapsed
+			let mass;                    // mass of remaining atmosphere (Kg)
+			let density;                 // density of remaining atmosphere (Kg / M^3)
+			let mass_loss;               // amount of atmosphere forced out of hole in a second
+
+			// read user input
+			volume = parseInt(document.getElementById('volume').value);
+			area_centimeters = parseInt(document.getElementById('area_centimeters').value);
+			atmospheres = parseInt(document.getElementById('pressure').value);
+
+			// prep user display
+			out.innerHTML = '';
+			error.innerHTML = '';
+
+			// check user input
+			if (isNaN(volume)) {
+				error.innerHTML += "<p>Please enter a numeric volume</p>";
+			}
+			if (isNaN(area)) {
+				error.innerHTML += "<p>Please enter a numeric area</p>";
+			}
+			if (isNaN(atmospheres)) {
+				error.innerHTML += "<p>Please enter a numeric starting pressure</p>";
+			}
+			if (error.innerHTML != "") {
+				return;
+			}
+
+			// derive some values from input
+			pressure = 100000 * atmospheres;
+			starting_pressure = pressure;
+			area = area_centimeters / 10000;
+
+			// generate boiler plate text at top of output
+			buffer = "<h1>Depressurization Time</h1>"
+				+ "<ul><li>compartment volume: " + volume + " cubic meters</li>"
+				+ "<li>area: " + area_centimeters + " square centimeters</li>"
+				+ "<li>pressure: " + atmospheres + " earth atmospheres</li>"
+				+ "</ul>";
+
+			buffer += "<table border=1 cellpadding=10><tr>"
+				+ "<th>Time (seconds / minute)</th>"
+				+ "<th>Mass remaining (kg)</th>"
+				+ "<th>Atmosphere density (kg/m^3)</th>"
+				+ "<th>Pressure (kPA / % of original)</th>"
+				+ "</tr>";
+
+			// run simulation
+			mass = pressure * volume * molecular_weight / Rg / temperature;
+			density = mass / volume;
+			do {
+				// output current situation
+				if ( 0 == seconds % interval )
+				buffer += "<tr>"
+					+ "<td>" + seconds.toFixed(0) + " / " + (seconds / 60).toFixed(1) + "</td>"
+					+ "<td>" + mass.toFixed(0) + "</td>"
+					+ "<td>" + density.toFixed(2) + "</td>"
+					+ "<td>" + (pressure.toFixed(2) / 1000).toFixed(0) + " / " + (pressure / starting_pressure * 100).toFixed(0) + "%</td>"
+					+ "</tr>";
+
+				// calculate what changes in next second
+				seconds++; // advance time by 1 second
+				mass_loss = area * Math.sqrt( 2 * pressure * density );
+				mass = mass - mass_loss;
+				density = mass / volume;
+				pressure = density * Rg * temperature / molecular_weight;
+			} while ( pressure > starting_pressure / 10 ) 
+
+			out.innerHTML += buffer + '</table>';
+		}
+		document.getElementById('simulate').addEventListener('click', simulate);
+
+		// TODO more options for atmosphere types: air, pure oxy, oxy-helium, neox
+
+		// TODO allow input of area of hole in either square metes or square centimeters
+		</script>
+	</body>
+</html>
